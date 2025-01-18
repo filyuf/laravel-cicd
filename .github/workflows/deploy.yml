@@ -47,7 +47,6 @@ jobs:
         run: |
           chmod -R 775 storage bootstrap/cache
 
-
       # 8. Zip the Laravel project
       - name: Zip project
         run: zip -r laravel.zip . -x "node_modules/*" "storage/logs/*" "storage/framework/sessions/*" ".git/*" "*.env"
