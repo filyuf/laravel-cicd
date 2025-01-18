@@ -1,1 +1,1 @@
-web: vendor/bin/heroku-php-apache2 public/
+web: aws s3 cp s3://your-s3-bucket/.env /var/app/current/.env && php artisan config:cache && vendor/bin/heroku-php-apache2 public/
