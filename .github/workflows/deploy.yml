@@ -25,6 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           composer install --no-dev --optimize-autoloader
+          composer dump-autoload --optimize
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
@@ -49,7 +50,7 @@ jobs:
 
       # 8. Zip the Laravel project
       - name: Zip project
-        run: zip -r laravel.zip . -x "node_modules/*" "storage/logs/*" "storage/framework/sessions/*" ".git/*"
+        run: zip -r laravel.zip . -x "node_modules/*" "storage/logs/*" "storage/framework/sessions/*" ".git/*" "*.env"
 
       # 9. Upload build artifacts to GitHub Actions
       - name: Upload build artifacts
@@ -57,23 +58,6 @@ jobs:
         with:
           name: laravel
           path: laravel.zip
-
-      # 10. Configure AWS CLI
-      - name: Configure AWS CLI
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set region ${{ secrets.AWS_REGION }}
-
-      # 11. Upload to S3
-      - name: Upload to S3
-        run: |
-          aws s3 cp laravel.zip s3://${{ secrets.S3_BUCKET_NAME }}/laravel.zip
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
 
   deploy:
     needs: build
@@ -86,7 +70,24 @@ jobs:
         with:
           name: laravel
 
-      # 2. Deploy to Elastic Beanstalk
+      # 2. Configure AWS CLI
+      - name: Configure AWS CLI
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region ${{ secrets.AWS_REGION }}
+
+      # 3. Upload to S3
+      - name: Upload to S3
+        run: |
+          aws s3 cp laravel.zip s3://${{ secrets.S3_BUCKET_NAME }}/laravel.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      # 4. Deploy to Elastic Beanstalk
       - name: Deploy to Elastic Beanstalk
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -97,5 +98,11 @@ jobs:
           EB_APP_NAME: ${{ secrets.EB_APP_NAME }}
           S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
         run: |
-          aws elasticbeanstalk create-application-version --application-name ${{ secrets.EB_APP_NAME }} --version-label $GITHUB_SHA --source-bundle S3Bucket=${{ secrets.S3_BUCKET_NAME }},S3Key=laravel.zip
-          aws elasticbeanstalk update-environment --environment-name ${{ secrets.EB_ENV_NAME }} --version-label $GITHUB_SHA
+          aws elasticbeanstalk create-application-version \
+            --application-name ${{ secrets.EB_APP_NAME }} \
+            --version-label $GITHUB_SHA \
+            --source-bundle S3Bucket=${{ secrets.S3_BUCKET_NAME }},S3Key=laravel.zip
+
+          aws elasticbeanstalk update-environment \
+            --environment-name ${{ secrets.EB_ENV_NAME }} \
+            --version-label $GITHUB_SHA
