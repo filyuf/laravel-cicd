@@ -49,7 +49,7 @@ jobs:
 
       # 8. Zip the Laravel project
       - name: Zip project
-        run: zip -r laravel.zip . -x "node_modules/*" "storage/logs/*" "storage/framework/sessions/*" ".git/*" "*.env"
+        run: zip -r laravel.zip . -x "node_modules/*" "storage/logs/*" "storage/framework/sessions/*" ".git/*" 
 
       # 9. Upload build artifacts to GitHub Actions
       - name: Upload build artifacts
